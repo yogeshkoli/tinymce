@@ -15,7 +15,7 @@ interface Scenario {
 describe('browser.tinymce.plugins.table.InsertColumnTableSizeTest', () => {
   const hook = TinyHooks.bddSetup<Editor>({
     plugins: 'table',
-    width: 400,
+    width: 600,
     base_url: '/project/tinymce/js/tinymce'
   }, [ Plugin ], true);
 

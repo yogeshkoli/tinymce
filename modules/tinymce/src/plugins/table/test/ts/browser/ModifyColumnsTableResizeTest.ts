@@ -21,6 +21,7 @@ describe('browser.tinymce.plugins.table.ModifyColumnsTableResizeTest', () => {
   const baseSettings = {
     plugins: 'table',
     base_url: '/project/tinymce/js/tinymce',
+    content_style: 'body { margin: 1rem }'
   };
 
   const getTableWidth = (editor: Editor) =>

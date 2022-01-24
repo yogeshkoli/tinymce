@@ -37,7 +37,7 @@ describe('browser.tinymce.plugins.table.ResizeTableTest', () => {
 
   const defaultSettings = {
     plugins: 'table',
-    width: 400,
+    width: 600,
     height: 300,
     base_url: '/project/tinymce/js/tinymce',
     indent: false,
@@ -422,7 +422,7 @@ describe('browser.tinymce.plugins.table.ResizeTableTest', () => {
       );
       assertUnitBeforeResize(null, widths);
       assertUnitAfterResize('%', widths);
-      assertWidthAfterResize(35, widths, true);
+      assertWidthAfterResize(31, widths, true);
       assertEventData(lastObjectResizeStartEvent, 'objectresizestart');
       assertEventData(lastObjectResizedEvent, 'objectresized');
     });
@@ -442,7 +442,7 @@ describe('browser.tinymce.plugins.table.ResizeTableTest', () => {
         () => TableTestUtils.insertRaw(editor, responsiveTableWithContent)
       );
       assertUnitAfterResize('%', widths);
-      assertWidthAfterResize(53, widths, true);
+      assertWidthAfterResize(46, widths, true);
       assertEventData(lastObjectResizeStartEvent, 'objectresizestart');
       assertEventData(lastObjectResizedEvent, 'objectresized');
       const firstColWidth = widths.colWidthsAfter[0];
