@@ -1,4 +1,4 @@
-import { Arr, Obj, Optional } from '@ephox/katamari';
+import { Arr, Optional } from '@ephox/katamari';
 import { SugarElement, Width } from '@ephox/sugar';
 
 import Editor from 'tinymce/core/api/Editor';
@@ -8,14 +8,7 @@ export type TableSizingMode = 'fixed' | 'relative' | 'responsive' | 'auto';
 export type TableColumnResizing = 'preservetable' | 'resizetable';
 export type TableHeaderType = 'section' | 'cells' | 'sectionCells' | 'auto';
 
-const option: {
-  <K extends keyof EditorOptions>(name: K): (editor: Editor) => EditorOptions[K] | undefined;
-  <T>(name: string): (editor: Editor) => T | undefined;
-} = (name: string) => (editor: Editor) =>
-  editor.options.get(name);
-
-// Note: This is also contained in the table plugin Options.ts file
-const stylesAvailableAsAttributes = [ 'width' ];
+const defaultWidth = '100%';
 
 const getPixelForcedWidth = (editor: Editor) => {
   // Determine the inner size of the parent block element where the table will be inserted
@@ -26,29 +19,31 @@ const getPixelForcedWidth = (editor: Editor) => {
 
 // Note: This is also contained in the table plugin Options.ts file
 const determineDefaultTableStyles = (editor: Editor, defaultStyles: Record<string, string>): Record<string, string> => {
-  if (isTableResponsiveForced(editor) || shouldStyleWithCss(editor) === false) {
-    return Obj.filter(defaultStyles, (_value, key) => !Arr.contains(stylesAvailableAsAttributes, key));
+  if (isTableResponsiveForced(editor) || !shouldStyleWithCss(editor)) {
+    return defaultStyles;
   } else if (isTablePixelsForced(editor)) {
     return { ...defaultStyles, width: getPixelForcedWidth(editor) };
   } else {
-    return defaultStyles;
+    return { ...defaultStyles, width: defaultWidth };
   }
 };
 
 // Note: This is also contained in the table plugin Options.ts file
 const determineDefaultTableAttributes = (editor: Editor, defaultAttributes: Record<string, string>): Record<string, string> => {
-  const defaultStyles = editor.options.get('table_default_styles');
-
-  if (editor.options.isSet('table_default_styles')) {
-    return defaultAttributes;
-  } else if (shouldStyleWithCss(editor)) {
+  if (isTableResponsiveForced(editor) || shouldStyleWithCss(editor)) {
     return defaultAttributes;
   } else if (isTablePixelsForced(editor)) {
-    return { ...defaultAttributes, ...Obj.filter(defaultStyles, (_value, key) => Arr.contains(stylesAvailableAsAttributes, key)), width: getPixelForcedWidth(editor) };
+    return { ...defaultAttributes, width: getPixelForcedWidth(editor) };
   } else {
-    return { ...defaultAttributes, ...Obj.filter(defaultStyles, (_value, key) => Arr.contains(stylesAvailableAsAttributes, key)) };
+    return { ...defaultAttributes, width: defaultWidth };
   }
 };
+
+const option: {
+  <K extends keyof EditorOptions>(name: K): (editor: Editor) => EditorOptions[K] | undefined;
+  <T>(name: string): (editor: Editor) => T | undefined;
+} = (name: string) => (editor: Editor) =>
+  editor.options.get(name);
 
 const register = (editor: Editor): void => {
   const registerOption = editor.options.register;
@@ -85,8 +80,7 @@ const register = (editor: Editor): void => {
   registerOption('table_default_styles', {
     processor: 'object',
     default: {
-      'border-collapse': 'collapse',
-      'width': '100%'
+      'border-collapse': 'collapse'
     }
   });
 
@@ -102,6 +96,11 @@ const register = (editor: Editor): void => {
     processor: 'boolean',
     default: true
   });
+
+  registerOption('table_style_by_css', {
+    processor: 'boolean',
+    default: true
+  });
 };
 
 const getTableCloneElements = (editor: Editor): Optional<string[]> => {
@@ -114,6 +113,9 @@ const hasTableObjectResizing = (editor: Editor): boolean => {
 };
 
 const getTableHeaderType = option<TableHeaderType>('table_header_type');
+const hasTableResizeBars = option<boolean>('table_resize_bars');
+const shouldStyleWithCss = option<boolean>('table_style_by_css');
+const getTableSizingMode = option<TableSizingMode>('table_sizing_mode');
 
 const getTableColumnResizingBehaviour = option<TableColumnResizing>('table_column_resizing');
 
@@ -123,8 +125,6 @@ const isPreserveTableColumnResizing = (editor: Editor): boolean =>
 const isResizeTableColumnResizing = (editor: Editor): boolean =>
   getTableColumnResizingBehaviour(editor) === 'resizetable';
 
-const getTableSizingMode = option<TableSizingMode>('table_sizing_mode');
-
 const isTablePercentagesForced = (editor: Editor): boolean =>
   getTableSizingMode(editor) === 'relative';
 
@@ -133,10 +133,6 @@ const isTablePixelsForced = (editor: Editor): boolean =>
 
 const isTableResponsiveForced = (editor: Editor): boolean =>
   getTableSizingMode(editor) === 'responsive';
-
-const hasTableResizeBars = option<boolean>('table_resize_bars');
-
-const shouldStyleWithCss = option<boolean>('table_style_by_css');
 
 const getTableDefaultAttributes = (editor: Editor): Record<string, string> => {
   // Note: The we don't rely on the default here as we need to dynamically lookup the widths based on the current editor state
