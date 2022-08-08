@@ -1,6 +1,6 @@
 import { AlloyComponent, Attachment, Boxes, Disabling } from '@ephox/alloy';
 import { Cell, Singleton } from '@ephox/katamari';
-import { DomEvent, SugarElement } from '@ephox/sugar';
+import { DomEvent, Scroll, SugarElement } from '@ephox/sugar';
 
 import Editor from 'tinymce/core/api/Editor';
 import { NodeChangeEvent } from 'tinymce/core/api/EventTypes';
@@ -60,7 +60,20 @@ const setupEvents = (editor: Editor, targetElm: SugarElement, ui: InlineHeader, 
     requestAnimationFrame(() => resizeContent(e));
   });
 
-  editor.on('ScrollWindow', () => ui.updateMode());
+
+  // TINY-7827: We want to identify when horizontal scrolling has taken place
+  // so that we can change the width available to the inline editor container
+  let lastScrollX = 0;
+  editor.on('ScrollWindow', (e) => {
+    const newScrollX = Scroll.get().left;
+    if (newScrollX !== lastScrollX) {
+      lastScrollX = newScrollX;
+      // This will allow the editor container to resize to fill the available width
+      ui.update();
+    }
+
+    ui.updateMode();
+  });
 
   // Bind to async load events and trigger a content resize event if the size has changed
   const elementLoad = Singleton.unbindable();

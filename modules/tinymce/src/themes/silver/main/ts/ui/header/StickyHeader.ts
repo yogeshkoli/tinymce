@@ -201,6 +201,13 @@ const getBehaviours = (editor: Editor, sharedBackstage: UiFactoryBackstageShared
     Docking.config({
       contextual: {
         lazyContext: (comp) => {
+          // TINY-7827: Note: this code causes negative boxHeights when the 
+          // inline content area's height is less than the editor container's. This
+          // is likely to be the situation when a lack of available width causes
+          // the editor container to wrap onto several lines, increasing its height.
+          // We need to investigate what is the intent here. The lazyContent is used
+          // by Docking to work out when to make the Docking-configured component
+          // disappear completely (/ fade).
           const headerHeight = Height.getOuter(comp.element);
           const container = editor.inline ? editor.getContentAreaContainer() : editor.getContainer();
           const box = Boxes.box(SugarElement.fromDom(container));

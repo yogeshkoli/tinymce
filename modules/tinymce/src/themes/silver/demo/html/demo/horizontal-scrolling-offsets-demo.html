@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Look at this</title>
+    <style>
+
+      .mover {
+        transition: left 10s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="window-line" style="height: 100px; width: 10px; background-color: black;">X</div>
+
+    <div style="width: 110vw">
+      Banner to make page scroll
+    </div>
+
+    <div class="mover" style="position: absolute; left: 0px;">
+      <div style="display: flex; flex-wrap: wrap;">
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        <button>Alpha</button>
+        
+        <button>Alpha</button>
+        <button>Alpha</button>
+      </div>
+    </div>
+
+
+    <script>
+      const mover = document.querySelector('.mover');
+      mover.clientWidth;
+      mover.style.setProperty('left', '2500px');
+      mover.clientWidth;
+
+
+      const line = document.querySelector('.window-line');
+      line.style.setProperty('position', 'absolute');
+      line.style.setProperty('left', window.innerWidth + 'px');
+
+    </script>
+  </body>
+</html>

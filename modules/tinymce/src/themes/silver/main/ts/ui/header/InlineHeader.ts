@@ -1,6 +1,6 @@
 import { AlloyComponent, Boxes, Channels, Docking, VerticalDir } from '@ephox/alloy';
 import { Cell, Fun, Optional, Singleton } from '@ephox/katamari';
-import { Attribute, Css, Height, SugarBody, SugarElement, SugarLocation, Traverse, Width } from '@ephox/sugar';
+import { Attribute, Css, Height, Scroll, SugarBody, SugarElement, SugarLocation, Traverse, Width } from '@ephox/sugar';
 
 import DOMUtils from 'tinymce/core/api/dom/DOMUtils';
 import Editor from 'tinymce/core/api/Editor';
@@ -114,7 +114,7 @@ export const InlineHeader = (
     });
   };
 
-  const updateChromePosition = () => {
+  const updateChromePosition = (optToolbarWidth) => {
     floatContainer.on((container) => {
       const toolbar = OuterContainer.getToolbar(outerContainer);
       const offset = calcToolbarOffset(toolbar);
@@ -126,16 +126,101 @@ export const InlineHeader = (
         Math.max(targetBounds.y - Height.get(container.element) + offset, 0) :
         targetBounds.bottom;
 
-      Css.setAll(outerContainer.element, {
+      const baseProperties = {
         position: 'absolute',
-        top: Math.round(top) + 'px',
-        left: Math.round(targetBounds.x) + 'px'
+        left: Math.round(targetBounds.x) + 'px',
+        top: Math.round(top) + 'px'
+      };
+
+      const widthProperties = optToolbarWidth.filter(
+        (_) => targetBounds.x > window.innerWidth
+      ).map(
+        (toolbarWidth: number) => {
+          const scroll = Scroll.get();
+
+          // This minimum width (150) is entirely arbitrarily determined. Change as 
+          // required. The minimum width is designed to create an editor container of 
+          // at least 150 pixels, even when near the edge of the screen. As the editor
+          // container can wrap its elements (due to flex-wrap), the width of the 
+          // container impacts also its height.
+          //
+          // Adding a minimum width works around two problems:
+          //
+          // a) The docking behaviour (e.g. lazyContext) does not handle the situation
+          // of a very thin component near the edge of the screen very well, and actually
+          // has no concept of horizontal scroll - it only checks y values.
+          //
+          // b) A very small toolbar is essentially unusable. On scrolling of X, we keep
+          // updating the width of the toolbar so that it can grow to fit the available
+          // space.
+          //
+          // As mentioned before, the 150px is entirely arbitrary. It was chosen because
+          // with "reasonable" toolbar items, it stays rendered to a reasonable height. 
+          // Note: this is entirely determined on the number of items in the menu and the
+          // toolbar, because when they wrap, that's what causes the height. Also, having
+          // multiple toolbars can also make it higher.
+          const minimumToolbarWidth = 150;
+
+          // The availableWidth is the amount of space to the right of the LEFT edge
+          // of the container. We convert the left edge to screen coordinates by 
+          // subtracting the scroll, so that we can subtract it from the window width
+          const availableWidth = window.innerWidth - (targetBounds.x - scroll.left);
+
+          // Despite how much availableWidth there is, never go smaller than minimumWidth
+          // and never go larger than the original toolbarWidth. If we exceed the original
+          // toolbarWidth, then the border / background etc. of the toolbar can extend 
+          // well past the end of the items.
+          const width = Math.max(
+            minimumToolbarWidth,
+            Math.min(
+              toolbarWidth,
+              availableWidth
+            )
+          );
+
+          return {
+            width: width + 'px'
+          };
+        }
+      ).getOr({ });
+
+      // Set top, left, and optional width all the same time.
+      Css.setAll(outerContainer.element, {
+        ...baseProperties,
+        ...widthProperties
       });
     });
   };
 
   const repositionPopups = () => {
     uiMothership.broadcastOn([ Channels.repositionPopups() ], { });
+  };
+
+  const restoreAndGetCompleteOuterContainerWidth = (): Optional<number> => {
+    // TINY-7827: Customers can stack the inline editors horizontally 
+    // across the page inside an area that is much wider than the page. This means
+    // that the editors further to the right are given "left" positions that are 
+    // beyond the window width. When this happens, the flex-wrap: wrap property
+    // wraps to the next line, even though there is quite a lot of available
+    // scrollWidth space. One way around this is to set a "width"
+    // style on the container as well.
+    //
+    // The problem is that we need to calculate the "unaffected" width, so to do
+    // that, we need to remove a lot of restrictions / styles first, so that the 
+    // width is just the natural container width. We also need to do this before 
+    // we do any refreshToolbars call, so that the overflow section is working 
+    // with the right dimensions.
+    if (!useFixedToolbarContainer) {
+      // Reset to the basics so that the width is the original width and is not
+      // constrained by any locations.
+      Css.set(outerContainer.element, 'position', 'absolute');
+      Css.set(outerContainer.element, 'left', '0px');
+      Css.remove(outerContainer.element, 'width');
+      const w = Width.getOuter(outerContainer.element);
+      return Optional.some(w);
+    } else {
+      return Optional.none();
+    }
   };
 
   const updateChromeUi = (resetDocking: boolean = false) => {
@@ -155,17 +240,31 @@ export const InlineHeader = (
       updateChromeWidth();
     }
 
-    // Refresh split toolbar
+    // TINY-7827: This width can be used for calculating the "width" when 
+    // resolving issues with flex-wrapping being triggered at the window width, 
+    // despite scroll space being available to the right
+    const optToolbarWidth: Optional<number> = restoreAndGetCompleteOuterContainerWidth();
+    
+    // Refresh split toolbar. Before calling refresh, we need to make sure that 
+    // we have the full width (through restoreAndGet.. above), otherwise too much 
+    // will be put in the overflow drawer. We may need to calculate the width again after
+    // this, also - just be aware of that.
     if (isSplitToolbar) {
       OuterContainer.refreshToolbar(outerContainer);
     }
 
     // Positioning
     if (!useFixedToolbarContainer) {
-      updateChromePosition();
+      // This will position the container in the right spot. Due to TINY-7827, 
+      // it can set the "right" as well as the "left".
+      updateChromePosition(optToolbarWidth);
     }
 
-    // Docking
+    // TINY-7827: Docking doesn't handle edge cases caused by very high editor 
+    // containers for inline very well, so be aware of that. In most cases, it's 
+    // bypassed by having a minimum width that is wide enough that the height never 
+    // becomes a problem, but that could be dependent upon the configuration of the 
+    // toolbar and menu bars, which will determine how much wrapping is still required.
     if (isSticky) {
       const action = resetDocking ? Docking.reset : Docking.refresh;
       floatContainer.on(action);
@@ -200,6 +299,9 @@ export const InlineHeader = (
     DOM.addClass(editor.getBody(), 'mce-edit-focus');
     Css.remove(uiMothership.element, 'display');
     updateMode(false);
+    // This is the one that makes it move from wherever it is, to the smaller box
+    // that it occupies. Previously, it was a rectangle anchored a body, probably ... but I'll verify. Nah, I think it's just in the DOM flow wherever it is, because it doesn't
+    // have position: absolute yet.
     updateChromeUi();
   };
 
