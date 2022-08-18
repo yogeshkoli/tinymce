@@ -136,7 +136,8 @@ export default (): void => {
     toolbar_mode: 'floating',
     emoticons_database_url: '/src/plugins/emoticons/main/js/emojis.js',
     resize_img_proportional: true,
-    format_empty_lines: true
+    format_empty_lines: true,
+    valid_children: '+body[style]'
   };
 
   tinymce.init(settings);

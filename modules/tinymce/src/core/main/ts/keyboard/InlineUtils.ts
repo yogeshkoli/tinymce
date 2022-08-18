@@ -1,5 +1,5 @@
-import { Arr, Fun, Optional, Type } from '@ephox/katamari';
-import { Selectors, SugarElement } from '@ephox/sugar';
+import { Arr, Fun, Obj, Optional, Type } from '@ephox/katamari';
+import { PredicateExists, Selectors, SugarElement } from '@ephox/sugar';
 
 import DOMUtils from '../api/dom/DOMUtils';
 import Editor from '../api/Editor';
@@ -10,8 +10,16 @@ import * as CaretUtils from '../caret/CaretUtils';
 import * as NodeType from '../dom/NodeType';
 import * as Bidi from '../text/Bidi';
 
-const isInlineTarget = (editor: Editor, elm: Node): elm is Element =>
-  Selectors.is(SugarElement.fromDom(elm), Options.getInlineBoundarySelector(editor));
+const isInlineTarget = (editor: Editor, elm: Node): elm is Element => {
+  const sugarElm = SugarElement.fromDom(elm);
+  const matches = Selectors.is(sugarElm, Options.getInlineBoundarySelector(editor));
+  if (matches && Obj.has(editor.schema.getTransparentElements(), elm.nodeName)) {
+    // For transparent elements we need to ensure it's used in an inline context/has not block children
+    return !PredicateExists.descendant(sugarElm, (e) => editor.dom.isBlock(e.dom));
+  } else {
+    return matches;
+  }
+};
 
 const isRtl = (element: Element): boolean =>
   DOMUtils.DOM.getStyle(element, 'direction', true) === 'rtl' || Bidi.hasStrongRtl(element.textContent ?? '');

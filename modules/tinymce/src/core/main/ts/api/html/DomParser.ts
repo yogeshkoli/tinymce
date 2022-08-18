@@ -5,7 +5,7 @@ import createDompurify, { Config, DOMPurifyI } from 'dompurify';
 import * as NodeType from '../../dom/NodeType';
 import * as FilterNode from '../../html/FilterNode';
 import * as FilterRegistry from '../../html/FilterRegistry';
-import { cleanInvalidNodes } from '../../html/InvalidNodes';
+import * as InvalidNodes from '../../html/InvalidNodes';
 import * as LegacyFilter from '../../html/LegacyFilter';
 import * as ParserFilters from '../../html/ParserFilters';
 import { isEmpty, isLineBreakNode, isPaddedWithNbsp, paddEmptyNode } from '../../html/ParserUtils';
@@ -495,16 +495,13 @@ const DomParser = (settings: DomParserSettings = {}, schema = Schema()): DomPars
   const removeAttributeFilter = attributeFilterRegistry.removeFilter;
 
   const findInvalidChildren = (node: AstNode, invalidChildren: AstNode[]): void => {
-    // Check if the node is a valid child of the parent node. If the child is
-    // unknown we don't collect it since it's probably a custom element
-    const parent = node.parent;
-    if (parent && schema.children[node.name] && !schema.isValidChild(parent.name, node.name)) {
+    if (InvalidNodes.isInvalid(schema, node)) {
       invalidChildren.push(node);
     }
   };
 
   const addRootBlocks = (rootNode: AstNode, rootBlockName: string): void => {
-    const blockElements = extend(makeMap('script,style,head,html,body,title,meta,param'), schema.getBlockElements());
+    const blockElements = extend(makeMap('script,style,head,html,body,title,meta,param'), schema.getBlockElements(), schema.getTransparentElements());
     const startWhiteSpaceRegExp = /^[ \t\r\n]+/;
     const endWhiteSpaceRegExp = /[ \t\r\n]+$/;
 
@@ -598,10 +595,10 @@ const DomParser = (settings: DomParserSettings = {}, schema = Schema()): DomPars
     if (validate && invalidChildren.length > 0) {
       if (args.context) {
         const { pass: topLevelChildren, fail: otherChildren } = Arr.partition(invalidChildren, (child) => child.parent === rootNode);
-        cleanInvalidNodes(otherChildren, schema, matchFinder);
+        InvalidNodes.cleanInvalidNodes(otherChildren, schema, matchFinder);
         args.invalid = topLevelChildren.length > 0;
       } else {
-        cleanInvalidNodes(invalidChildren, schema, matchFinder);
+        InvalidNodes.cleanInvalidNodes(invalidChildren, schema, matchFinder);
       }
     }
 

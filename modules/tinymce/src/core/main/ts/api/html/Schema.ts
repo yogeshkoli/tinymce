@@ -14,6 +14,7 @@ interface ElementSettings {
   text_inline_elements?: string;
   void_elements?: string;
   whitespace_elements?: string;
+  transparent_elements?: string;
 }
 
 export interface SchemaSettings extends ElementSettings {
@@ -85,6 +86,7 @@ interface Schema {
   getNonEmptyElements: () => SchemaMap;
   getMoveCaretBeforeOnEnterElements: () => SchemaMap;
   getWhitespaceElements: () => SchemaMap;
+  getTransparentElements: () => SchemaMap;
   getSpecialElements: () => SchemaRegExpMap;
   isValidChild: (name: string, child: string) => boolean;
   isValid: (name: string, attr?: string) => boolean;
@@ -210,9 +212,10 @@ const compileSchema = (type: SchemaType): SchemaLookupTable => {
 
   // Add HTML5 items to globalAttributes, blockContent, phrasingContent
   if (type !== 'html4') {
+    const transparentContent = 'a ins del canvas map';
     globalAttributes += ' contenteditable contextmenu draggable dropzone ' +
       'hidden spellcheck translate';
-    blockContent += ' article aside details dialog figure main header footer hgroup section nav';
+    blockContent += ' article aside details dialog figure main header footer hgroup section nav ' + transparentContent;
     phrasingContent += ' audio canvas command datalist mark meter output picture ' +
       'progress time wbr video ruby bdi keygen';
   }
@@ -262,7 +265,7 @@ const compileSchema = (type: SchemaType): SchemaLookupTable => {
   add('ul', '', 'li');
   add('li', 'value', flowContent);
   add('dl', '', 'dt dd');
-  add('a', 'href target rel media hreflang type', phrasingContent);
+  add('a', 'href target rel media hreflang type', flowContent);
   add('q', 'cite', phrasingContent);
   add('ins del', 'cite datetime', flowContent);
   add('img', 'src sizes srcset alt usemap ismap width height');
@@ -399,9 +402,6 @@ const compileSchema = (type: SchemaType): SchemaLookupTable => {
 
   // TODO: LI:s can only have value if parent is OL
 
-  // TODO: Handle transparent elements
-  // a ins del canvas map
-
   lookupCache[type] = schema;
 
   return schema;
@@ -492,6 +492,8 @@ const Schema = (settings: SchemaSettings = {}): Schema => {
     'datalist select optgroup figcaption details summary', textBlockElementsMap);
   const textInlineElementsMap = createLookupTable('text_inline_elements', 'span strong b em i font s strike u var cite ' +
     'dfn code mark q sup sub samp');
+
+  const transparentElementsMap = createLookupTable('transparent_elements', 'a ins del canvas map');
 
   // See https://html.spec.whatwg.org/multipage/parsing.html#parsing-html-fragments
   each(('script noscript iframe noframes noembed title style textarea xmp plaintext').split(' '), (name) => {
@@ -990,6 +992,14 @@ const Schema = (settings: SchemaSettings = {}): Schema => {
   const getWhitespaceElements = Fun.constant(whitespaceElementsMap);
 
   /**
+   * Returns a map with elements that should be treated as transparent.
+   *
+   * @method getTransparentElements
+   * @return {Object} Name/value lookup map for special elements.
+   */
+  const getTransparentElements = Fun.constant(transparentElementsMap);
+
+  /**
    * Returns a map with special elements. These are elements that needs to be parsed
    * in a special way such as script, style, textarea etc. The map object values
    * are regexps used to find the end of the element.
@@ -1119,6 +1129,7 @@ const Schema = (settings: SchemaSettings = {}): Schema => {
     getNonEmptyElements,
     getMoveCaretBeforeOnEnterElements,
     getWhitespaceElements,
+    getTransparentElements,
     getSpecialElements,
     isValidChild,
     isValid,
