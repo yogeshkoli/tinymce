@@ -174,7 +174,7 @@ const register = (editor: Editor): void => {
         return { valid: false, message: 'Must be boolean or a string' };
       }
     },
-    default: 'blockquote'
+    default: 'blockquote,a'
   });
 
   registerOption('font_size_style_values', {
