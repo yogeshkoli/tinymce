@@ -1,7 +1,6 @@
 import { Arr, Obj, Optional } from '@ephox/katamari';
 
 import Editor from '../Editor';
-import DOMUtils from './DOMUtils';
 
 type SelectorChangedCallback = (active: boolean, args: { node: Node; selector: String; parents: Node[] }) => void;
 
@@ -21,15 +20,15 @@ const deleteFromCallbackMap = (callbackMap: Record<string, SelectorChangedCallba
   }
 };
 
-export default (dom: DOMUtils, editor: Editor): SelectorChanged => {
+export default (editor: Editor): SelectorChanged => {
   let selectorChangedData: Record<string, SelectorChangedCallback[]>;
   let currentSelectors: Record<string, SelectorChangedCallback[]>;
 
   const findMatchingNode = (selector: string, nodes: Node[]): Optional<Node> =>
-    Arr.find(nodes, (node) => dom.is(node, selector));
+    Arr.find(nodes, (node) => editor.dom.is(node, selector));
 
   const getParents = (elem: Element): Node[] =>
-    dom.getParents(elem, undefined, dom.getRoot());
+    editor.dom.getParents(elem, undefined, editor.dom.getRoot());
 
   const setup = (): void => {
     selectorChangedData = {};

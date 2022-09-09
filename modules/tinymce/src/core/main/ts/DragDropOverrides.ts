@@ -390,20 +390,26 @@ const blockUnsupportedFileDrop = (editor: Editor) => {
 
   const setup = () => {
     const pageDom = DOMUtils.DOM;
-    const dom = editor.dom;
     const doc = document;
-    const editorRoot = editor.inline ? editor.getBody() : editor.getDoc();
+    const getEditorRoot = () => editor.inline ? editor.getBody() : editor.getDoc();
 
     const eventNames = [ 'drop', 'dragover' ];
     Arr.each(eventNames, (name) => {
       pageDom.bind(doc, name, preventFileDropIfUIElement);
-      dom.bind(editorRoot, name, preventFileDrop);
+      editor.dom.bind(getEditorRoot(), name, preventFileDrop);
+    });
+
+    // Rebind if the editor reloads
+    editor.on('ReloadEditor', () => {
+      Arr.each(eventNames, (name) => {
+        editor.dom.bind(getEditorRoot(), name, preventFileDrop);
+      });
     });
 
     editor.on('remove', () => {
       Arr.each(eventNames, (name) => {
         pageDom.unbind(doc, name, preventFileDropIfUIElement);
-        dom.unbind(editorRoot, name, preventFileDrop);
+        editor.dom.unbind(getEditorRoot(), name, preventFileDrop);
       });
     });
   };

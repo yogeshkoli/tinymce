@@ -109,7 +109,10 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
   let selectedRange: Range | null;
   let explicitRange: Range | null;
 
-  const { selectorChangedWithUnbind } = SelectorChanged(dom, editor);
+  const { selectorChangedWithUnbind } = SelectorChanged(editor);
+
+  const lazyWin = () => exports.win;
+  const lazyDom = () => exports.dom;
 
   /**
    * Move the selection cursor range to the specified node and offset.
@@ -120,7 +123,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
    * @param {Number} offset Optional offset from the start of the node to put the cursor at.
    */
   const setCursorLocation = (node?: Node, offset?: number) => {
-    const rng = dom.createRng();
+    const rng = lazyDom().createRng();
 
     if (Type.isNonNullable(node) && Type.isNonNullable(offset)) {
       rng.setStart(node, offset);
@@ -128,7 +131,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
       setRng(rng);
       collapse(false);
     } else {
-      moveEndPoint(dom, rng, editor.getBody(), true);
+      moveEndPoint(lazyDom(), rng, editor.getBody(), true);
       setRng(rng);
     }
   };
@@ -229,7 +232,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
    * tinymce.activeEditor.selection.select(tinymce.activeEditor.dom.select('p')[0]);
    */
   const select = (node: Node, content?: boolean) => {
-    ElementSelection.select(dom, node, content).each(setRng);
+    ElementSelection.select(lazyDom(), node, content).each(setRng);
     return node;
   };
 
@@ -273,7 +276,8 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
    * @method getSel
    * @return {Selection} Internal browser selection object.
    */
-  const getSel = (): Selection | null => win.getSelection ? win.getSelection() : (win.document as any).selection;
+  const getSel = (): Selection | null =>
+    lazyWin().getSelection ? lazyWin().getSelection() : (lazyWin().document as any).selection;
 
   /**
    * Returns the browsers internal range object.
@@ -299,7 +303,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
       }
     };
 
-    const doc = win.document;
+    const doc = lazyWin().document;
 
     if (Type.isNonNullable(editor.bookmark) && !EditorFocus.hasFocus(editor)) {
       const bookmark = SelectionBookmark.getRng(editor);
@@ -332,7 +336,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
 
     // If range is at start of document then move it to start of body
     if (NodeType.isDocument(rng.startContainer) && rng.collapsed) {
-      const elm = dom.getRoot();
+      const elm = lazyDom().getRoot();
       rng.setStart(elm, 0);
       rng.setEnd(elm, 0);
     }
@@ -428,7 +432,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
    * tinymce.activeEditor.selection.setNode(tinymce.activeEditor.dom.create('img', { src: 'some.gif', title: 'some title' }));
    */
   const setNode = (elm: Element): Element => {
-    setContent(dom.getOuterHTML(elm));
+    setContent(lazyDom().getOuterHTML(elm));
     return elm;
   };
 
@@ -444,7 +448,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
   const getNode = (): HTMLElement => ElementSelection.getNode(editor.getBody(), getRng());
 
   const getSelectedBlocks = (startElm?: Element, endElm?: Element) =>
-    ElementSelection.getSelectedBlocks(dom, getRng(), startElm, endElm);
+    ElementSelection.getSelectedBlocks(lazyDom(), getRng(), startElm, endElm);
 
   const isForward = (): boolean => {
     const sel = getSel();
@@ -457,8 +461,8 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
       return true;
     }
 
-    const anchorRange = dom.createRng();
-    const focusRange = dom.createRng();
+    const anchorRange = lazyDom().createRng();
+    const focusRange = lazyDom().createRng();
 
     try {
       anchorRange.setStart(anchorNode, sel.anchorOffset);
@@ -480,7 +484,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
     const sel = getSel();
 
     if (!MultiRange.hasMultipleRanges(sel) && hasAnyRanges(editor)) {
-      const normRng = NormalizeRange.normalize(dom, rng);
+      const normRng = NormalizeRange.normalize(lazyDom(), rng);
 
       normRng.each((normRng) => {
         setRng(normRng, isForward());
@@ -507,7 +511,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
 
   const getScrollContainer = (): HTMLElement | undefined => {
     let scrollContainer;
-    let node = dom.getRoot();
+    let node = lazyDom().getRoot();
 
     while (node && node.nodeName !== 'BODY') {
       if (node.scrollHeight > node.clientHeight) {
@@ -538,7 +542,7 @@ const EditorSelection = (dom: DOMUtils, win: Window, serializer: DomSerializer, 
   };
 
   const destroy = () => {
-    (win as any) = selectedRange = explicitRange = null;
+    (exports.win as any) = selectedRange = explicitRange = null;
     controlSelection.destroy();
   };
 

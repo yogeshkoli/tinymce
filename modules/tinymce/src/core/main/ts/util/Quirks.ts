@@ -616,7 +616,7 @@ const Quirks = (editor: Editor): Quirks => {
    * For example this: <form><button></form>
    */
   const blockFormSubmitInsideEditor = () => {
-    editor.on('init', () => {
+    editor.on('init ReloadEditor', () => {
       editor.dom.bind(editor.getBody(), 'submit', (e) => {
         e.preventDefault();
       });

@@ -1,5 +1,5 @@
 import { Obj, Type } from '@ephox/katamari';
-import { Attribute, DomEvent, Insert, Remove, SugarElement, SugarShadowDom } from '@ephox/sugar';
+import { Attribute, Insert, Remove, SugarElement, SugarShadowDom } from '@ephox/sugar';
 
 import Annotator from '../api/Annotator';
 import DOMUtils from '../api/dom/DOMUtils';
@@ -8,7 +8,6 @@ import DomSerializer, { DomSerializerSettings } from '../api/dom/Serializer';
 import StyleSheetLoader from '../api/dom/StyleSheetLoader';
 import Editor from '../api/Editor';
 import EditorUpload from '../api/EditorUpload';
-import Env from '../api/Env';
 import * as Events from '../api/Events';
 import Formatter from '../api/Formatter';
 import DomParser, { DomParserSettings } from '../api/html/DomParser';
@@ -36,6 +35,7 @@ import { hasAnyRanges } from '../selection/SelectionUtils';
 import SelectionOverrides from '../SelectionOverrides';
 import * as TextPattern from '../textpatterns/TextPatterns';
 import Quirks from '../util/Quirks';
+import * as IFrameManager from './IFrameManager';
 
 declare const escape: any;
 
@@ -475,26 +475,8 @@ const initContentBody = (editor: Editor, skipWrite?: boolean): void => {
   // Setup iframe body
   if (!skipWrite && !editor.inline) {
     const iframe = editor.iframeElement as HTMLIFrameElement;
-    const binder = DomEvent.bind(SugarElement.fromDom(iframe), 'load', () => {
-      binder.unbind();
-
-      // Reset the content document, since using srcdoc will change the document
-      editor.contentDocument = iframe.contentDocument as Document;
-
-      // Continue to init the editor
-      contentBodyLoaded(editor);
-    });
-
-    // TINY-8916: Firefox has a bug in its srcdoc implementation that prevents cookies being sent so unfortunately we need
-    // to fallback to legacy APIs to load the iframe content. See https://bugzilla.mozilla.org/show_bug.cgi?id=1741489
-    if (Env.browser.isFirefox()) {
-      const doc = editor.getDoc();
-      doc.open();
-      doc.write(editor.iframeHTML as string);
-      doc.close();
-    } else {
-      iframe.srcdoc = editor.iframeHTML as string;
-    }
+    const manager = IFrameManager.create(editor, iframe);
+    manager.load(editor.iframeHTML as string, contentBodyLoaded);
   } else {
     contentBodyLoaded(editor);
   }
