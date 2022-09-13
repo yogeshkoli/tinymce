@@ -286,15 +286,12 @@ const setup = (editor: Editor): RenderInfo => {
         tag: 'div',
         classes: [ 'tox-editor-container' ]
       },
-      components: editorComponents
+      components: Arr.flatten<AlloySpec>([
+        editorComponents,
+        // Inline mode does not have a status bar
+        isInline ? [ ] : statusbar.toArray()
+      ])
     };
-
-    const containerComponents = Arr.flatten<AlloySpec>([
-      [ editorContainer ],
-      // Inline mode does not have a status bar
-      isInline ? [ ] : statusbar.toArray(),
-      [ partThrobber ]
-    ]);
 
     // Hide the outer container if using inline mode and there's no menubar or toolbar
     const isHidden = Options.isDistractionFree(editor);
@@ -321,7 +318,7 @@ const setup = (editor: Editor): RenderInfo => {
           },
           attributes
         },
-        components: containerComponents,
+        components: [ editorContainer, partThrobber ],
         behaviours: Behaviour.derive([
           ReadOnly.receivingConfig(),
           Disabling.config({
