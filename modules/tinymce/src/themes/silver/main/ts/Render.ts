@@ -29,7 +29,7 @@ import * as Utils from './ui/sizing/Utils';
 import { renderStatusbar } from './ui/statusbar/Statusbar';
 import * as Throbber from './ui/throbber/Throbber';
 import { RenderToolbarConfig } from './ui/toolbar/Integration';
-import * as View from './ui/view/View';
+import { ViewConfig } from './ui/view/ViewTypes';
 
 export interface ModeRenderInfo {
   readonly iframeContainer?: HTMLIFrameElement;
@@ -55,7 +55,7 @@ export type ToolbarConfig = Array<string | Options.ToolbarGroupOption> | string 
 
 export interface RenderUiConfig extends RenderToolbarConfig, MenuRegistry {
   readonly sidebar: Sidebar.SidebarConfig;
-  readonly customViews: View.ViewConfig;
+  readonly views: ViewConfig;
 }
 
 export interface RenderArgs {
@@ -272,7 +272,7 @@ const setup = (editor: Editor): RenderInfo => {
       backstage
     });
 
-    const partCustomViewWrapper: AlloySpec = OuterContainer.parts.customViewWrapper({
+    const partViewWrapper: AlloySpec = OuterContainer.parts.viewWrapper({
       backstage
     });
 
@@ -322,7 +322,7 @@ const setup = (editor: Editor): RenderInfo => {
         },
         components: [
           editorContainer,
-          ...isInline ? [] : [ partCustomViewWrapper ],
+          ...isInline ? [] : [ partViewWrapper ],
           partThrobber,
         ],
         behaviours: Behaviour.derive([
@@ -394,7 +394,7 @@ const setup = (editor: Editor): RenderInfo => {
     });
 
     // Apply Bridge types
-    const { buttons, menuItems, contextToolbars, sidebars, customViews } = editor.ui.registry.getAll();
+    const { buttons, menuItems, contextToolbars, sidebars, views } = editor.ui.registry.getAll();
     const toolbarOpt: Optional<ToolbarConfig> = Options.getMultipleToolbarsOption(editor);
     const rawUiConfig: RenderUiConfig = {
       menuItems,
@@ -404,7 +404,7 @@ const setup = (editor: Editor): RenderInfo => {
       allowToolbarGroups: toolbarMode === Options.ToolbarMode.floating,
       buttons,
       sidebar: sidebars,
-      customViews
+      views
     };
 
     setupShortcutsAndCommands(outerContainer);
